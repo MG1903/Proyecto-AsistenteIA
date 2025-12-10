@@ -1,0 +1,148 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>{% block title %}Panel IA Relojería{% endblock %}</title>
+
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              DEFAULT: '#2563eb',
+              light: '#60a5fa',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+  </style>
+
+  {% block extra_head %}{% endblock %}
+</head>
+<body class="bg-slate-50 text-slate-900">
+
+<div class="min-h-screen flex">
+
+  <!-- SIDEBAR -->
+  <aside class="hidden md:flex md:flex-col w-64 bg-white border-r border-slate-200">
+    <div class="h-16 flex items-center px-6 border-b border-slate-200">
+      <span class="w-8 h-8 rounded-lg bg-brand/10 flex items-center justify-center font-bold text-brand mr-2">
+        ⌚
+      </span>
+      <div>
+        <p class="text-sm font-semibold leading-tight">Asistente IA</p>
+        <p class="text-xs text-slate-500">Relojería Panel</p>
+      </div>
+    </div>
+
+    <nav class="flex-1 py-4 text-sm">
+      <p class="px-6 text-[11px] uppercase tracking-wide text-slate-400 mb-2">Menú</p>
+
+      <a href="{% url 'panel_dashboard' %}"
+         class="flex items-center gap-2 px-6 py-2.5 hover:bg-slate-100
+         {% if section == 'dashboard' %}bg-slate-100 text-brand{% endif %}">
+        <span>🏠</span><span>Dashboard</span>
+      </a>
+
+      <a href="{% url 'panel_documentos' %}"
+         class="flex items-center gap-2 px-6 py-2.5 hover:bg-slate-100
+         {% if section == 'documentos' %}bg-slate-100 text-brand{% endif %}">
+        <span>📂</span><span>Documentos</span>
+      </a>
+
+      <a href="{% url 'panel_consultas' %}"
+         class="flex items-center gap-2 px-6 py-2.5 hover:bg-slate-100
+         {% if section == 'consultas' %}bg-slate-100 text-brand{% endif %}">
+        <span>💬</span><span>Consultas</span>
+      </a>
+
+      <a href="{% url 'panel_metricas' %}"
+         class="flex items-center gap-2 px-6 py-2.5 hover:bg-slate-100
+         {% if section == 'metricas' %}bg-slate-100 text-brand{% endif %}">
+        <span>📈</span><span>Métricas</span>
+      </a>
+
+      <a href="{% url 'panel_logs' %}"
+         class="flex items-center gap-2 px-6 py-2.5 hover:bg-slate-100
+         {% if section == 'logs' %}bg-slate-100 text-brand{% endif %}">
+        <span>📝</span><span>Logs</span>
+      </a>
+
+      <p class="px-6 text-[11px] uppercase tracking-wide text-slate-400 mt-4 mb-2">Sistema</p>
+
+    </nav>
+
+    <div class="px-6 py-4 border-t border-slate-200 text-xs text-slate-500">
+      <p>Sesión: {{ request.user.username }}</p>
+      <p class="mt-1">© 2025 Asistente IA</p>
+    </div>
+  </aside>
+
+  <!-- CONTENIDO -->
+  <main class="flex-1 flex flex-col">
+
+    <!-- TOPBAR -->
+    <header class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-8">
+      <div>
+        <h1 class="text-lg font-semibold">
+          {% block header_title %}Dashboard{% endblock %}
+        </h1>
+        <p class="text-xs text-slate-500">
+          {% block header_subtitle %}Resumen general del asistente IA.{% endblock %}
+        </p>
+      </div>
+
+      <div class="flex items-center gap-4 text-xs">
+        <div class="hidden sm:flex flex-col items-end">
+          <span class="font-medium">{{ request.user.get_full_name|default:request.user.username }}</span>
+          <span class="text-slate-500">{{ request.user.email }}</span>
+        </div>
+        <a href="{% url 'logout' %}"
+           class="px-3 py-1.5 rounded-full border border-slate-300 text-xs hover:bg-slate-50">
+          Cerrar sesión
+        </a>
+      </div>
+    </header>
+
+    <!-- BODY -->
+    <section class="flex-1 p-4 md:p-8">
+      {% block content %}
+
+        {% if messages %}
+          <div class="mb-4">
+            {% for message in messages %}
+              <div class="px-4 py-2 rounded-lg text-xs
+                          {% if message.tags == 'success' %}
+                            bg-emerald-100 text-emerald-800
+                          {% elif message.tags == 'error' %}
+                            bg-red-100 text-red-800
+                          {% else %}
+                            bg-slate-100 text-slate-800
+                          {% endif %}">
+                {{ message }}
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+
+      {% endblock %}
+    </section>
+
+  </main>
+</div>
+
+{% block extra_scripts %}{% endblock %}
+</body>
+</html>

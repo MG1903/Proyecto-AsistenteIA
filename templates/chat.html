@@ -1,0 +1,234 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Asistente Virtual | Relojería</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    /* Configuración del tema: Paleta corporativa y animaciones custom */
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              DEFAULT: '#2563eb', 
+              dark: '#1d4ed8',
+              light: '#dbeafe',
+            }
+          },
+          animation: {
+            'bounce-slow': 'bounce 1.4s infinite ease-in-out both',
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Personalización de scrollbar para consistencia en WebKit (Chrome/Safari) */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #f1f5f9; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+    /* Indicador de carga: Secuencia de puntos con retraso para efecto de ola */
+    .dot {
+      width: 8px; height: 8px;
+      background-color: #94a3b8;
+      border-radius: 50%;
+      display: inline-block;
+      animation: bounce-delay 1.4s infinite ease-in-out both;
+    }
+    .dot:nth-child(1) { animation-delay: -0.32s; }
+    .dot:nth-child(2) { animation-delay: -0.16s; }
+    
+    @keyframes bounce-delay {
+      0%, 80%, 100% { transform: scale(0); }
+      40% { transform: scale(1); }
+    }
+    
+    body {
+        background-color: #f8fafc;
+        background-image: radial-gradient(#cbd5e1 1px, transparent 1px);
+        background-size: 20px 20px;
+    }
+
+    /* Animación de entrada para mensajes (Mejora la percepción de fluidez) */
+    @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fade-in-up {
+        animation: fadeInUp 0.3s ease-out forwards;
+    }
+  </style>
+</head>
+<body class="h-screen w-full flex items-center justify-center p-0 md:p-4">
+
+  <div class="w-full h-full md:h-[85vh] md:max-w-md bg-white md:rounded-2xl shadow-2xl overflow-hidden flex flex-col border border-slate-200">
+
+    <header class="bg-white border-b border-slate-100 p-4 flex items-center justify-between z-10 shadow-sm">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-full bg-brand/10 flex items-center justify-center text-xl">
+          IA
+        </div>
+        <div>
+          <h1 class="font-bold text-slate-800 text-sm leading-tight">Asistente Virtual</h1>
+          <div class="flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <p class="text-[11px] text-slate-500 font-medium">En línea</p>
+          </div>
+        </div>
+      </div>
+
+      <a href="{% url 'login' %}" 
+         class="text-xs font-medium text-brand bg-brand/5 px-3 py-1.5 rounded-full hover:bg-brand/10 transition">
+        Admin
+      </a>
+    </header>
+
+    <div id="chat-box" class="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/50 scroll-smooth">
+      
+      <div class="flex gap-3">
+        <div class="w-8 h-8 rounded-full bg-brand/10 flex-shrink-0 flex items-center justify-center text-sm">IA</div>
+        <div class="bg-white border border-slate-100 p-3 rounded-2xl rounded-tl-none shadow-sm max-w-[80%]">
+          <p class="text-sm text-slate-700">
+            ¡Hola! 👋 Soy el asistente de <strong>Bendita la hora</strong>. <br>
+            ¿En qué puedo ayudarte hoy con nuestros relojes o servicios?
+          </p>
+          <span class="text-[10px] text-slate-400 mt-1 block text-right">Ahora</span>
+        </div>
+      </div>
+
+      <div id="typing-indicator" class="hidden flex gap-3">
+        <div class="w-8 h-8 rounded-full bg-brand/10 flex-shrink-0 flex items-center justify-center text-sm">IA</div>
+        <div class="bg-white border border-slate-100 px-4 py-3 rounded-2xl rounded-tl-none shadow-sm flex items-center gap-1">
+          <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+        </div>
+      </div>
+
+    </div>
+
+    <footer class="bg-white p-3 border-t border-slate-100">
+      <div class="relative flex items-center gap-2">
+        <input type="text" id="input-msg" 
+               placeholder="Escribe tu consulta aquí..." 
+               class="w-full bg-slate-100 text-slate-700 text-sm rounded-full pl-5 pr-12 py-3 focus:outline-none focus:ring-2 focus:ring-brand/50 transition border border-transparent focus:bg-white placeholder-slate-400"
+               autocomplete="off">
+        
+        <button onclick="sendMessage()" id="btn-send"
+                class="absolute right-1.5 top-1.5 bg-brand hover:bg-brand-dark text-white p-2 rounded-full transition shadow-md disabled:opacity-50 disabled:cursor-not-allowed">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4 transform rotate-0 ml-0.5">
+            <path d="M3.478 2.404a.75.75 0 00-.926.941l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.404z" />
+          </svg>
+        </button>
+      </div>
+      <p class="text-[10px] text-center text-slate-400 mt-2">
+        IA impulsada por DeepSeek & RAG • Respuestas generadas automáticamente.
+      </p>
+    </footer>
+
+  </div>
+
+  <script>
+    /**
+     * Módulo de Chat Cliente
+     * Gestiona la conexión WebSocket, renderizado del DOM y experiencia de usuario (UX).
+     */
+    const chatBox = document.getElementById("chat-box");
+    const inputMsg = document.getElementById("input-msg");
+    const btnSend = document.getElementById("btn-send");
+    const typingIndicator = document.getElementById("typing-indicator");
+
+    // Establecer conexión persistente con el servidor asíncrono (Daphne/Uvicorn)
+    const socket = new WebSocket("ws://" + window.location.host + "/ws/chat/");
+
+    socket.onmessage = function (e) {
+      const data = JSON.parse(e.data);
+
+      if (data.message) {
+        // La respuesta del RAG llegó, finalizamos estado de carga
+        ocultarEscribiendo();
+        agregarMensajeBot(data.message);
+      }
+    };
+
+    socket.onclose = function(e) {
+      console.error('WebSocket desconectado. Verifique el servidor ASGI.');
+    };
+
+    function sendMessage() {
+      const msg = inputMsg.value.trim();
+      if (msg !== "") {
+        // Optimistic UI: Renderizamos mensaje inmediatamente para mejor latencia percibida
+        agregarMensajeUsuario(msg);
+        
+        socket.send(JSON.stringify({ message: msg }));
+        
+        inputMsg.value = "";
+        mostrarEscribiendo();
+      }
+    }
+
+    function agregarMensajeUsuario(texto) {
+      const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      
+      // Inyección segura de HTML en el contenedor
+      const html = `
+        <div class="flex flex-row-reverse gap-3 animate-fade-in-up">
+           <div class="bg-brand text-white p-3 rounded-2xl rounded-tr-none shadow-md max-w-[85%] text-sm">
+             <p>${texto}</p>
+             <span class="text-[10px] text-brand-light block text-left mt-1 opacity-80">${time}</span>
+           </div>
+        </div>
+      `;
+      // Insertamos antes del indicador de carga para mantener el flujo visual correcto
+      typingIndicator.insertAdjacentHTML('beforebegin', html);
+      scrollToBottom();
+    }
+
+    function agregarMensajeBot(texto) {
+      const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+      // Formateo básico: Preservar saltos de línea del LLM
+      const textoFormateado = texto.replace(/\n/g, '<br>');
+
+      const html = `
+        <div class="flex gap-3 animate-fade-in-up">
+          <div class="w-8 h-8 rounded-full bg-brand/10 flex-shrink-0 flex items-center justify-center text-sm">🤖</div>
+          <div class="bg-white border border-slate-100 p-3 rounded-2xl rounded-tl-none shadow-sm max-w-[85%] text-sm text-slate-700">
+            <p>${textoFormateado}</p>
+            <span class="text-[10px] text-slate-400 mt-1 block text-right">${time}</span>
+          </div>
+        </div>
+      `;
+      typingIndicator.insertAdjacentHTML('beforebegin', html);
+      scrollToBottom();
+    }
+
+    function mostrarEscribiendo() {
+      typingIndicator.classList.remove('hidden');
+      scrollToBottom();
+    }
+
+    function ocultarEscribiendo() {
+      typingIndicator.classList.add('hidden');
+      inputMsg.focus();
+    }
+
+    function scrollToBottom() {
+      // Auto-scroll al último mensaje
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    inputMsg.addEventListener("keypress", function (e) {
+      if (e.key === "Enter") sendMessage();
+    });
+
+  </script>
+
+</body>
+</html>

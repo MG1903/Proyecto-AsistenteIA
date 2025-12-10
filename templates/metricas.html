@@ -1,0 +1,211 @@
+{% extends "base_panel.html" %}
+
+{% block title %}Métricas | Panel IA{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+{% endblock %}
+
+{% block header_title %}Métricas del asistente{% endblock %}
+
+{% block header_subtitle %}
+  <div class="flex items-center justify-between w-full">
+    <span>Rendimiento de las consultas realizadas al asistente IA.</span>
+    
+    <button onclick="descargarReportePDF()" 
+            id="btn-pdf"
+            class="text-slate-500 hover:text-brand hover:underline text-xs flex items-center gap-1 transition cursor-pointer">
+      <span></span> Descargar Reporte
+    </button>
+  </div>
+{% endblock %}
+
+{% block content %}
+
+<div id="reporte-imprimible" class="p-1 bg-slate-50">
+
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+      <div class="bg-white rounded-xl border border-slate-200 p-4">
+        <p class="text-xs text-slate-500 mb-1">Consultas con métricas</p>
+        <p class="text-2xl font-semibold">{{ total_metricas }}</p>
+        <p class="text-[11px] text-slate-500 mt-1">
+          Registros en la tabla <strong>Metricas</strong>
+        </p>
+      </div>
+
+      <div class="bg-white rounded-xl border border-slate-200 p-4">
+        <p class="text-xs text-slate-500 mb-1">Tiempo promedio</p>
+        <p class="text-2xl font-semibold">
+          {% if avg_tiempo %}
+            {{ avg_tiempo|floatformat:0 }} ms
+          {% else %}—{% endif %}
+        </p>
+        <p class="text-[11px] text-slate-500 mt-1">
+          Basado en las últimas consultas
+        </p>
+      </div>
+
+      <div class="bg-white rounded-xl border border-slate-200 p-4">
+        <p class="text-xs text-slate-500 mb-1">Tiempo mínimo</p>
+        <p class="text-2xl font-semibold">
+          {% if min_tiempo %}
+            {{ min_tiempo|floatformat:0 }} ms
+          {% else %}—{% endif %}
+        </p>
+        <p class="text-[11px] text-slate-500 mt-1">
+          Respuesta más rápida registrada
+        </p>
+      </div>
+
+      <div class="bg-white rounded-xl border border-slate-200 p-4">
+        <p class="text-xs text-slate-500 mb-1">Tiempo máximo</p>
+        <p class="text-2xl font-semibold">
+          {% if max_tiempo %}
+            {{ max_tiempo|floatformat:0 }} ms
+          {% else %}—{% endif %}
+        </p>
+        <p class="text-[11px] text-slate-500 mt-1">
+          Respuesta más lenta registrada
+        </p>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+
+      <div class="bg-white rounded-xl border border-slate-200 p-4">
+        <h2 class="text-sm font-semibold mb-2">Similitud Vectorial Promedio</h2>
+        <p class="text-3xl font-semibold mb-2 text-brand">
+          {% if avg_precision %}
+            {{ avg_precision|floatformat:3 }}
+          {% else %}
+            —
+          {% endif %}
+        </p>
+        <p class="text-xs text-slate-500 mb-4">
+          Índice de confianza (0.0 = Nula, 1.0 = Exacta).
+        </p>
+
+        {% if avg_precision %}
+          <div class="mt-2">
+            <div class="flex justify-between text-[10px] text-slate-400 mb-1">
+              <span>0.0</span>
+              <span>0.5</span>
+              <span>1.0</span>
+            </div>
+            <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+              <div class="bg-brand h-2 rounded-full transition-all duration-1000"
+                   style="width: calc({{ avg_precision }} * 100%);"></div>
+            </div>
+            
+            <p class="text-[11px] text-slate-500 mt-2 font-medium">
+              Interpretación: 
+              {% if avg_precision >= 0.8 %}
+                <span class="text-emerald-600">Alta fiabilidad 🟢</span>
+              {% elif avg_precision >= 0.5 %}
+                <span class="text-amber-600">Similitud media 🟠</span>
+              {% else %}
+                <span class="text-red-500">Baja similitud (Posible alucinación) 🔴</span>
+              {% endif %}
+            </p>
+          </div>
+        {% else %}
+          <p class="text-xs text-slate-400 mt-2">Sin datos suficientes.</p>
+        {% endif %}
+      </div>
+
+      <div class="lg:col-span-2 bg-white rounded-xl border border-slate-200 p-4">
+        <h2 class="text-sm font-semibold mb-2">Resumen rápido</h2>
+        <ul class="text-xs text-slate-600 list-disc pl-4 space-y-1">
+          <li>Las métricas se calculan por cada <strong>Consulta</strong> que pasa por el flujo RAG.</li>
+          <li><code>tiempo_respuesta_ms</code> registra la latencia completa desde que llega la pregunta hasta que se envía la respuesta.</li>
+          <li>La similitud vectorial es que tan igual la informacion en la bd a la respuesta / consulta generada</li>
+        </ul>
+      </div>
+
+    </div>
+
+    <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+      <div class="flex items-center justify-between px-4 py-3 border-b border-slate-200">
+        <h2 class="text-sm font-semibold">Últimas métricas registradas</h2>
+        <p class="text-[11px] text-slate-500">
+          Mostrando hasta 50 consultas recientes
+        </p>
+      </div>
+
+      <table class="w-full text-xs">
+        <thead class="bg-slate-50 border-b border-slate-200">
+          <tr>
+            <th class="text-left px-4 py-2">Fecha</th>
+            <th class="text-left px-4 py-2">Pregunta</th>
+            <th class="text-left px-4 py-2">Tiempo (ms)</th>
+            <th class="text-left px-4 py-2">Similitud V</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for m in metricas %}
+            <tr class="border-b border-slate-100 hover:bg-slate-50/60">
+              <td class="px-4 py-2 text-slate-600">
+                {{ m.fecha|date:"d/m/Y H:i" }}
+              </td>
+              <td class="px-4 py-2">
+                <span class="line-clamp-2 max-w-xs md:max-w-md">
+                  {{ m.consulta.texto_pregunta }}
+                </span>
+              </td>
+              <td class="px-4 py-2">
+                {{ m.tiempo_respuesta_ms|floatformat:0 }}
+              </td>
+              <td class="px-4 py-2">
+                {% if m.precision %}
+                  {{ m.precision|floatformat:2 }}
+                {% else %}
+                  <span class="text-slate-400">—</span>
+                {% endif %}
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="4" class="px-4 py-6 text-center text-slate-500">
+                Aún no hay métricas registradas.
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="mt-8 pt-4 border-t border-slate-300 text-center text-[10px] text-slate-400 hidden show-on-pdf">
+        Reporte generado automáticamente por Sistema RAG - {{ "now"|date:"d/m/Y H:i" }}
+    </div>
+
+</div> {% endblock %}
+
+{% block extra_scripts %}
+<script>
+  function descargarReportePDF() {
+    const element = document.getElementById('reporte-imprimible');
+    const btn = document.getElementById('btn-pdf');
+
+    // Ocultar botón temporalmente
+    btn.style.display = 'none';
+
+    const opt = {
+      margin:       [10, 10], 
+      filename:     'Metricas_IA_{{ "now"|date:"Ymd_Hi" }}.pdf',
+      image:        { type: 'jpeg', quality: 0.98 },
+      html2canvas:  { scale: 2, useCORS: true }, 
+      jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+
+    html2pdf().set(opt).from(element).save().then(function() {
+        // Mostrar botón de nuevo
+        btn.style.display = 'flex';
+    });
+  }
+</script>
+
+<style>
+    /* Clase auxiliar para mostrar cosas solo en el PDF */
+    .show-on-pdf { display: none; }
+</style>
+{% endblock %}

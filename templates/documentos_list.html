@@ -1,0 +1,288 @@
+{% extends "base_panel.html" %}
+
+{% block title %}Documentos | Panel IA{% endblock %}
+{% block header_title %}Gestión de documentos{% endblock %}
+{% block header_subtitle %}Archivos fuente que alimentan la base de conocimiento del asistente.{% endblock %}
+
+{% block content %}
+
+<div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+  <div class="bg-white rounded-xl border border-slate-200 p-4">
+    <p class="text-xs text-slate-500 mb-1">Total documentos</p>
+    <p class="text-2xl font-semibold">{{ total_documentos }}</p>
+  </div>
+
+  <div class="bg-white rounded-xl border border-slate-200 p-4">
+    <p class="text-xs text-slate-500 mb-1">Pendientes</p>
+    <p class="text-2xl font-semibold">{{ documentos_pendientes }}</p>
+  </div>
+
+  <div class="bg-white rounded-xl border border-slate-200 p-4">
+    <p class="text-xs text-slate-500 mb-1">Cargados</p>
+    <p class="text-2xl font-semibold">{{ documentos_cargados }}</p>
+  </div>
+
+  <div class="bg-white rounded-xl border border-slate-200 p-4">
+    <p class="text-xs text-slate-500 mb-1">Última actualización</p>
+    <p class="text-sm font-semibold">
+      {{ ultimo_documento_fecha|default:"—" }}
+    </p>
+  </div>
+</div>
+
+<div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
+  <div class="flex items-center gap-3">
+    <h2 class="text-sm font-semibold">Documentos</h2>
+    <span class="text-xs text-slate-500">
+      Lista de archivos subidos por el administrador.
+    </span>
+  </div>
+
+  <div class="flex items-center gap-2">
+    <form method="get" class="relative">
+      <input type="text"
+             name="q"
+             value="{{ request.GET.q }}"
+             placeholder="Buscar por nombre..."
+             class="border border-slate-300 rounded-full px-3 py-1.5 text-xs w-52 focus:outline-none focus:ring-1 focus:ring-brand">
+    </form>
+    <button onclick="document.getElementById('modal-upload').showModal()"
+            class="px-3 py-1.5 rounded-full bg-brand text-white text-xs hover:bg-brand/90">
+    + Nuevo documento
+    </button>
+  </div>
+</div>
+
+<div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+  <table class="w-full text-xs">
+    <thead class="bg-slate-50 border-b border-slate-200">
+      <tr>
+        <th class="text-left px-4 py-2">Nombre</th>
+        <th class="text-left px-4 py-2">Estado</th>
+        <th class="text-left px-4 py-2">Usuario</th>
+        <th class="text-left px-4 py-2">Fecha subida</th>
+        <th class="text-left px-4 py-2">Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for doc in documentos %}
+        <tr class="border-b border-slate-100 hover:bg-slate-50/60 transition-colors">
+          <td class="px-4 py-2">
+            <span class="font-medium">{{ doc.nombre_archivo }}</span>
+          </td>
+          <td class="px-4 py-2">
+            <span class="inline-flex px-2 py-0.5 rounded-full text-[11px]
+                {% if doc.estado == 'Cargado' %}
+                  bg-emerald-50 text-emerald-700 border border-emerald-200
+                {% elif doc.estado == 'Pendiente' %}
+                  bg-amber-50 text-amber-700 border border-amber-200
+                {% elif doc.estado == 'Procesando' %}
+                  bg-blue-50 text-blue-700 border border-blue-200
+                {% else %}
+                  bg-slate-50 text-slate-700 border border-slate-200
+                {% endif %}
+            ">{{ doc.estado }}</span>
+          </td>
+          <td class="px-4 py-2 text-slate-600">
+            {{ doc.usuario.username|default:"—" }}
+          </td>
+          <td class="px-4 py-2 text-slate-600">
+            {{ doc.fecha_subida|date:"d/m/Y H:i" }}
+          </td>
+          <td class="px-4 py-2">
+            <div class="flex items-center gap-3">
+              <button onclick="verDocumento({{ doc.id }})" 
+                      class="text-brand font-medium hover:underline cursor-pointer">
+                Ver
+              </button>
+              
+              {% if doc.estado == 'Cargado' %}
+              <button onclick="verChunks({{ doc.id }})" 
+                      class="text-slate-500 hover:text-brand hover:underline cursor-pointer">
+                Chunks
+              </button>
+              {% else %}
+              <span class="text-slate-300 cursor-not-allowed">Chunks</span>
+              {% endif %}
+
+              <a href="{{ doc.archivo.url }}" download 
+                 class="text-slate-500 hover:text-brand hover:underline">
+                Descargar
+              </a>
+            </div>
+          </td>
+        </tr>
+      {% empty %}
+        <tr>
+          <td colspan="5" class="px-4 py-6 text-center text-slate-500">
+            No hay documentos registrados.
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<dialog id="modal-upload" class="rounded-xl p-0 shadow-xl w-full max-w-md backdrop:bg-slate-900/30">
+  <form id="uploadForm" method="post" enctype="multipart/form-data" 
+        class="bg-white rounded-xl p-6 border border-slate-200">
+    {% csrf_token %}
+    <h3 class="text-lg font-semibold mb-4">Subir nuevo documento</h3>
+    <label class="text-xs font-medium text-slate-700">Archivo (Solo CSV)</label>
+    <input type="file" name="archivo" id="fileInput" accept=".csv" required
+           class="border border-slate-300 rounded-lg w-full px-3 py-2 text-sm mb-4 focus:ring-1 focus:ring-brand focus:outline-none">
+    <div class="flex items-center justify-end gap-3 mt-4">
+      <button type="button" onclick="document.getElementById('modal-upload').close()" class="px-3 py-1.5 rounded-lg border text-xs">Cancelar</button>
+      <button type="submit" class="px-3 py-1.5 rounded-lg bg-brand text-white text-xs hover:bg-brand/90">Subir documento</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="modal-ver" class="rounded-xl p-0 shadow-xl w-full max-w-2xl backdrop:bg-slate-900/30">
+  <div class="bg-white rounded-xl p-6 border border-slate-200 flex flex-col max-h-[80vh]">
+    <div class="flex justify-between items-center mb-4">
+        <h3 class="text-lg font-semibold text-slate-800" id="titulo-ver">Vista Previa</h3>
+        <button onclick="document.getElementById('modal-ver').close()" class="text-slate-400 hover:text-slate-600">✕</button>
+    </div>
+    <div class="flex-1 overflow-auto bg-slate-50 p-4 rounded-lg border border-slate-100">
+        <pre id="contenido-ver" class="text-xs text-slate-600 font-mono whitespace-pre-wrap"></pre>
+    </div>
+    <div class="mt-4 flex justify-end">
+        <button onclick="document.getElementById('modal-ver').close()" class="px-4 py-2 rounded-lg border border-slate-200 text-xs font-medium hover:bg-slate-50">Cerrar</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="modal-chunks" class="rounded-xl p-0 shadow-xl w-full max-w-3xl backdrop:bg-slate-900/30">
+  <div class="bg-white rounded-xl p-6 border border-slate-200 flex flex-col max-h-[80vh]">
+    <div class="flex justify-between items-center mb-4">
+        <h3 class="text-lg font-semibold text-slate-800" id="titulo-chunks">Chunks Vectorizados</h3>
+        <button onclick="document.getElementById('modal-chunks').close()" class="text-slate-400 hover:text-slate-600">✕</button>
+    </div>
+    <p class="text-xs text-slate-500 mb-2">Estos son los fragmentos exactos que la IA utiliza para responder.</p>
+    
+    <div id="lista-chunks" class="flex-1 overflow-auto space-y-2 pr-2">
+        </div>
+
+    <div class="mt-4 flex justify-end">
+        <button onclick="document.getElementById('modal-chunks').close()" class="px-4 py-2 rounded-lg border border-slate-200 text-xs font-medium hover:bg-slate-50">Cerrar</button>
+    </div>
+  </div>
+</dialog>
+
+<div id="loadingOverlay" class="hidden fixed inset-0 z-50 flex flex-col items-center justify-center bg-slate-900/60 backdrop-blur-sm transition-opacity duration-300">
+    <div class="relative w-16 h-16 mb-4">
+        <div class="absolute inset-0 border-4 border-slate-200/30 rounded-full"></div>
+        <div class="absolute inset-0 border-4 border-brand border-t-transparent rounded-full animate-spin"></div>
+        <div class="absolute inset-0 flex items-center justify-center text-2xl"></div>
+    </div>
+    <h3 class="text-white text-lg font-semibold tracking-wide">Procesando Información...</h3>
+    <p id="loadingText" class="text-slate-300 text-sm mt-1 animate-pulse">Vectorizando inventario en ChromaDB</p>
+</div>
+
+<script>
+    // Subida 
+    document.getElementById('uploadForm').addEventListener('submit', async function(e) {
+        e.preventDefault(); 
+        const fileInput = document.getElementById('fileInput');
+        const overlay = document.getElementById('loadingOverlay');
+        const modal = document.getElementById('modal-upload');
+
+        if(fileInput.files.length === 0) { alert("Debes seleccionar un archivo."); return; }
+        const fileName = fileInput.files[0].name;
+        if (!fileName.toLowerCase().endsWith('.csv')) { alert("Formato de archivo no compatible"); return; }
+
+        modal.close();
+        overlay.classList.remove('hidden');
+
+        const formData = new FormData();
+        formData.append('archivo', fileInput.files[0]);
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+        try {
+            const response = await fetch("{% url 'panel_documentos_upload' %}", {
+                method: 'POST', headers: { 'X-CSRFToken': csrfToken }, body: formData
+            });
+            const data = await response.json();
+
+            if (data.status === 'success') {
+                document.getElementById('loadingText').innerText = "¡Listo! Actualizando...";
+                setTimeout(() => { window.location.reload(); }, 800);
+            } else {
+                overlay.classList.add('hidden'); modal.showModal(); alert("❌ " + data.message);
+            }
+        } catch (error) {
+            overlay.classList.add('hidden'); alert("❌ Error de conexión.");
+        }
+    });
+
+    // VER DOCUMENTO 
+    async function verDocumento(docId) {
+        const modal = document.getElementById('modal-ver');
+        const titulo = document.getElementById('titulo-ver');
+        const contenido = document.getElementById('contenido-ver');
+        
+        // Limpiar y mostrar cargando
+        titulo.innerText = "Cargando...";
+        contenido.innerText = "Obteniendo archivo del servidor...";
+        modal.showModal();
+
+        try {
+            const res = await fetch(`/api/doc/${docId}/content/`);
+            const data = await res.json();
+            
+            if(data.status === 'success') {
+                titulo.innerText = "" + data.nombre;
+                contenido.innerText = data.contenido;
+            } else {
+                contenido.innerText = "Error al cargar contenido.";
+            }
+        } catch(e) {
+            contenido.innerText = "Error de conexión.";
+        }
+    }
+
+    // VER CHUNKS 
+    async function verChunks(docId) {
+        const modal = document.getElementById('modal-chunks');
+        const titulo = document.getElementById('titulo-chunks');
+        const lista = document.getElementById('lista-chunks');
+
+        // Limpiar
+        titulo.innerText = "Cargando...";
+        lista.innerHTML = '<div class="text-center p-4 text-slate-400">Cargando fragmentos...</div>';
+        modal.showModal();
+
+        try {
+            const res = await fetch(`/api/doc/${docId}/chunks/`);
+            const data = await res.json();
+
+            if(data.status === 'success') {
+                titulo.innerText = "Chunks de: " + data.nombre;
+                lista.innerHTML = ""; // Limpiar loading
+
+                if(data.chunks.length === 0) {
+                    lista.innerHTML = '<div class="text-center p-4 text-slate-400">No hay chunks generados.</div>';
+                    return;
+                }
+
+                // Generar tarjetas para cada chunk
+                data.chunks.forEach((chunk, index) => {
+                    const item = document.createElement('div');
+                    item.className = "bg-slate-50 p-3 rounded border border-slate-100 text-xs text-slate-700 font-mono";
+                    item.innerHTML = `
+                        <div class="font-bold text-brand mb-1">Chunk #${index + 1}</div>
+                        <div>${chunk.contenido_del_texto}</div>
+                    `;
+                    lista.appendChild(item);
+                });
+            } else {
+                lista.innerHTML = '<div class="text-red-500 p-4">Error obteniendo chunks.</div>';
+            }
+        } catch(e) {
+            lista.innerHTML = '<div class="text-red-500 p-4">Error de conexión.</div>';
+        }
+    }
+</script>
+
+{% endblock %}

@@ -1,0 +1,165 @@
+{% extends "base_panel.html" %}
+
+{% block title %}Logs | Panel IA{% endblock %}
+{% block header_title %}Logs del sistema{% endblock %}
+{% block header_subtitle %}
+Registro de eventos importantes del asistente IA (subidas, errores, procesos).
+{% endblock %}
+
+{% block content %}
+
+<!-- TARJETAS SUPERIORES -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+  <div class="bg-white rounded-xl border border-slate-200 p-4">
+    <p class="text-xs text-slate-500 mb-1">Eventos registrados</p>
+    <p class="text-2xl font-semibold">{{ total_logs }}</p>
+    <p class="text-[11px] text-slate-500 mt-1">
+      Total de registros en la tabla Logs.
+    </p>
+  </div>
+
+  <div class="bg-white rounded-xl border border-slate-200 p-4">
+    <p class="text-xs text-slate-500 mb-1">Eventos de hoy</p>
+    <p class="text-2xl font-semibold">{{ logs_hoy }}</p>
+    <p class="text-[11px] text-slate-500 mt-1">
+      Filtrados por fecha actual.
+    </p>
+  </div>
+
+  <div class="bg-white rounded-xl border border-slate-200 p-4">
+    <p class="text-xs text-slate-500 mb-1">Errores RAG</p>
+    <p class="text-2xl font-semibold">{{ errores_rag }}</p>
+    <p class="text-[11px] text-slate-500 mt-1">
+      Eventos con acción <code>ERROR_RAG</code>.
+    </p>
+  </div>
+
+  <div class="bg-white rounded-xl border border-slate-200 p-4">
+    <p class="text-xs text-slate-500 mb-1">Subidas de documentos</p>
+    <p class="text-2xl font-semibold">{{ subidas_docs }}</p>
+    <p class="text-[11px] text-slate-500 mt-1">
+      Eventos con acción <code>SUBIDA_DOCUMENTO</code>.
+    </p>
+  </div>
+</div>
+
+<!-- FILTROS -->
+<div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
+  <div>
+    <h2 class="text-sm font-semibold">Historial de logs</h2>
+    <p class="text-xs text-slate-500">
+     filtrar por tipo de acción, documento o texto en los detalles.
+    </p>
+  </div>
+
+  <form method="get" class="flex flex-col sm:flex-row gap-2 sm:items-center">
+    <!-- Select de acción -->
+    <select name="accion"
+            class="border border-slate-300 rounded-full px-3 py-1.5 text-xs
+                   focus:outline-none focus:ring-1 focus:ring-brand w-full sm:w-40">
+      <option value="">Todas las acciones</option>
+      {% for acc in acciones_disponibles %}
+        <option value="{{ acc }}" {% if acc == accion_filtro %}selected{% endif %}>
+          {{ acc }}
+        </option>
+      {% endfor %}
+    </select>
+
+    <!-- Buscador -->
+    <input type="text"
+           name="q"
+           value="{{ busqueda }}"
+           placeholder="Buscar en acción, detalles o documento..."
+           class="border border-slate-300 rounded-full px-3 py-1.5 text-xs w-full sm:w-64
+                  focus:outline-none focus:ring-1 focus:ring-brand">
+
+    <div class="flex gap-2 justify-end">
+      <button type="submit"
+              class="px-3 py-1.5 rounded-full bg-brand text-white text-xs hover:bg-brand/90">
+        Filtrar
+      </button>
+      {% if busqueda or accion_filtro %}
+        <a href="{% url 'panel_logs' %}"
+           class="px-3 py-1.5 rounded-full border border-slate-300 text-xs">
+          Limpiar
+        </a>
+      {% endif %}
+    </div>
+  </form>
+</div>
+
+<!-- TABLA DE LOGS -->
+<div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+  <table class="w-full text-xs">
+    <thead class="bg-slate-50 border-b border-slate-200">
+      <tr>
+        <th class="text-left px-4 py-2 w-32">Fecha</th>
+        <th class="text-left px-4 py-2 w-32">Usuario</th>
+        <th class="text-left px-4 py-2 w-40">Acción</th>
+        <th class="text-left px-4 py-2 w-48">Documento</th>
+        <th class="text-left px-4 py-2">Detalles</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for log in logs %}
+        <tr class="border-b border-slate-100 hover:bg-slate-50/60 align-top">
+          <td class="px-4 py-2 text-slate-600">
+            {{ log.timestamp|date:"d/m/Y" }}<br>
+            <span class="text-[11px] text-slate-500">
+              {{ log.timestamp|time:"H:i:s" }}
+            </span>
+          </td>
+
+          <td class="px-4 py-2">
+            {% if log.usuario %}
+              {{ log.usuario.username }}
+            {% else %}
+              <span class="text-slate-400">Sistema</span>
+            {% endif %}
+          </td>
+
+          <td class="px-4 py-2">
+            <span class="inline-flex px-2 py-0.5 rounded-full border text-[11px]
+                {% if 'ERROR' in log.accion %}
+                  border-red-200 bg-red-50 text-red-700
+                {% elif 'SUBIDA' in log.accion %}
+                  border-emerald-200 bg-emerald-50 text-emerald-700
+                {% else %}
+                  border-slate-200 bg-slate-50 text-slate-700
+                {% endif %}">
+              {{ log.accion }}
+            </span>
+          </td>
+
+          <td class="px-4 py-2">
+            {% if log.documento %}
+              <span class="line-clamp-2 max-w-[200px]">
+                {{ log.documento.nombre_archivo }}
+              </span>
+            {% else %}
+              <span class="text-slate-400">—</span>
+            {% endif %}
+          </td>
+
+          <td class="px-4 py-2">
+            {% if log.detalles %}
+              <p class="text-slate-600 line-clamp-3 max-w-xl">
+                {{ log.detalles }}
+              </p>
+            {% else %}
+              <span class="text-slate-400">Sin detalles adicionales.</span>
+            {% endif %}
+          </td>
+        </tr>
+      {% empty %}
+        <tr>
+          <td colspan="5" class="px-4 py-6 text-center text-slate-500">
+            Aún no hay registros en Logs.
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% endblock %}

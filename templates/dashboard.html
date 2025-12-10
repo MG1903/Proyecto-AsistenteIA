@@ -1,0 +1,130 @@
+{% extends "base_panel.html" %}
+
+{% block title %}Dashboard | Panel IA{% endblock %}
+{% block header_title %}Dashboard{% endblock %}
+{% block header_subtitle %}Resumen de documentos, consultas y rendimiento del asistente IA.{% endblock %}
+
+{% block content %}
+
+<!-- FILA 1: Tarjetas principales -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+  <div class="bg-white rounded-xl border border-slate-200 p-4">
+    <p class="text-xs text-slate-500 mb-1">Documentos cargados</p>
+    <p class="text-3xl font-semibold">{{ total_documentos }}</p>
+    <p class="text-xs text-slate-500 mt-2">
+      Último: {{ ultimo_documento_fecha|default:"—" }}
+    </p>
+  </div>
+
+  <div class="bg-white rounded-xl border border-slate-200 p-4">
+    <p class="text-xs text-slate-500 mb-1">Consultas totales</p>
+    <p class="text-3xl font-semibold">{{ total_consultas }}</p>
+    <p class="text-xs text-slate-500 mt-2">
+      Hoy: {{ consultas_hoy }}
+    </p>
+  </div>
+
+  <div class="bg-white rounded-xl border border-slate-200 p-4">
+    <p class="text-xs text-slate-500 mb-1">Tiempo promedio de respuesta</p>
+    <p class="text-3xl font-semibold">
+      {% if promedio_tiempo_ms %}
+        {{ promedio_tiempo_ms|floatformat:0 }} ms
+      {% else %}
+        —
+      {% endif %}
+    </p>
+    <p class="text-xs text-slate-500 mt-2">
+      Basado en métricas recientes
+    </p>
+  </div>
+
+  <div class="bg-white rounded-xl border border-slate-200 p-4">
+    <p class="text-xs text-slate-500 mb-1">Errores recientes</p>
+    <p class="text-3xl font-semibold">{{ total_errores }}</p>
+    <p class="text-xs mt-2">
+      <span class="inline-flex items-center text-emerald-600" {% if total_errores %}hidden{% endif %}>
+        ✅ Sin errores críticos
+      </span>
+    </p>
+  </div>
+</div>
+
+<!-- FILA 2: Izquierda: “Project Dashboard” – Derecha: resumen de estado -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+
+  <!-- Panel tipo “Project Dashboard” -->
+  <div class="lg:col-span-2 bg-white rounded-xl border border-slate-200 p-4">
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <h2 class="text-sm font-semibold">Actividad reciente del asistente</h2>
+        <p class="text-xs text-slate-500">Últimas consultas registradas</p>
+      </div>
+    </div>
+
+    <div class="space-y-3 max-h-64 overflow-y-auto">
+      {% for c in ultimas_consultas %}
+        <div class="flex items-start justify-between border border-slate-200 rounded-lg px-3 py-2">
+          <div>
+            <p class="text-sm font-medium line-clamp-1">"{{ c.texto_pregunta }}"</p>
+            <p class="text-xs text-slate-500 mt-1 line-clamp-1">
+              Respuesta: {{ c.texto_respuesta|truncatechars:80 }}
+            </p>
+          </div>
+          <div class="text-right text-xs text-slate-500">
+            <p>{{ c.fecha|date:"d/m/Y" }}</p>
+            <p>{{ c.fecha|time:"H:i" }}</p>
+          </div>
+        </div>
+      {% empty %}
+        <p class="text-xs text-slate-500 text-center py-4">
+          Aún no hay consultas registradas.
+        </p>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Panel tipo “Project Summary” -->
+  <div class="bg-white rounded-xl border border-slate-200 p-4">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-sm font-semibold">Resumen del sistema</h2>
+    </div>
+
+    <div class="space-y-3 text-xs">
+      <div class="flex items-center justify-between p-2 rounded-lg bg-slate-50">
+        <div>
+          <p class="font-medium">Documentos pendientes</p>
+          <p class="text-slate-500">{{ documentos_pendientes }} documentos</p>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-between p-2 rounded-lg bg-slate-50">
+        <div>
+          <p class="font-medium">Documentos cargados</p>
+          <p class="text-slate-500">{{ documentos_cargados }} documentos</p>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-between p-2 rounded-lg bg-slate-50">
+        <div>
+          <p class="font-medium">Consultas de hoy</p>
+          <p class="text-slate-500">{{ consultas_hoy }} consultas</p>
+        </div>
+      </div>
+
+      <div class="mt-4">
+        <p class="text-[11px] text-slate-500 mb-1">Disponibilidad del chatbot</p>
+        <div class="flex items-center gap-2">
+          <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+            <div class="bg-emerald-500 h-2 rounded-full" style="width: {{ disponibilidad_porcentaje|default:100 }}%;"></div>
+          </div>
+          <span class="text-[11px] text-slate-600">
+            {{ disponibilidad_porcentaje|default:100 }}%
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+{% endblock %}
